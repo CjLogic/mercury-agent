@@ -207,6 +207,7 @@ program
   .name('mercury')
   .description('Mercury — an AI agent for personal tasks')
   .version('0.1.0')
+  .option('-v, --verbose', 'Show debug logs')
   .action(async () => {
     if (!isSetupComplete()) {
       await onboarding();
@@ -218,6 +219,7 @@ program
 program
   .command('start')
   .description('Start Mercury agent')
+  .option('-v, --verbose', 'Show debug logs')
   .action(async () => {
     if (!isSetupComplete()) {
       await onboarding();
