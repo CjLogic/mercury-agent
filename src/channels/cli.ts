@@ -79,4 +79,14 @@ export class CLIChannel extends BaseChannel {
       this.rl?.question(question, (answer) => resolve(answer.trim()));
     });
   }
+
+  async askPermission(prompt: string): Promise<string> {
+    return new Promise((resolve) => {
+      console.log('');
+      console.log(chalk.yellow(`  ⚠ ${prompt}`));
+      this.rl?.question(chalk.yellow('  > '), (answer) => {
+        resolve(answer.trim());
+      });
+    });
+  }
 }

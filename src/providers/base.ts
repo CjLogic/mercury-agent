@@ -1,5 +1,4 @@
-import type { MercuryConfig, ProviderConfig } from '../utils/config.js';
-import { logger } from '../utils/logger.js';
+import type { ProviderConfig } from '../utils/config.js';
 
 export interface LLMResponse {
   text: string;
@@ -27,6 +26,7 @@ export abstract class BaseProvider {
   abstract generateText(prompt: string, systemPrompt: string): Promise<LLMResponse>;
   abstract streamText(prompt: string, systemPrompt: string): AsyncIterable<LLMStreamChunk>;
   abstract isAvailable(): boolean;
+  abstract getModelInstance(): any;
 
   getModel(): string {
     return this.config.model;

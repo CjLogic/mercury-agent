@@ -1,3 +1,4 @@
+import { generateText } from 'ai';
 import type { ChannelMessage } from '../types/channel.js';
 import type { ProviderRegistry } from '../providers/registry.js';
 import type { Identity } from '../soul/identity.js';
@@ -5,13 +6,17 @@ import type { ShortTermMemory, LongTermMemory, EpisodicMemory } from '../memory/
 import type { ChannelRegistry } from '../channels/registry.js';
 import type { MercuryConfig } from '../utils/config.js';
 import type { TokenBudget } from '../utils/tokens.js';
+import type { CapabilityRegistry } from '../capabilities/registry.js';
 import { Lifecycle } from './lifecycle.js';
 import { Scheduler } from './scheduler.js';
 import { logger } from '../utils/logger.js';
 
+const MAX_STEPS = 10;
+
 export class Agent {
   readonly lifecycle: Lifecycle;
   readonly scheduler: Scheduler;
+  readonly capabilities: CapabilityRegistry;
   private running = false;
   private messageQueue: ChannelMessage[] = [];
   private processing = false;
@@ -25,9 +30,11 @@ export class Agent {
     private episodic: EpisodicMemory,
     private channels: ChannelRegistry,
     private tokenBudget: TokenBudget,
+    capabilities: CapabilityRegistry,
   ) {
     this.lifecycle = new Lifecycle();
     this.scheduler = new Scheduler(config);
+    this.capabilities = capabilities;
 
     this.channels.onIncomingMessage((msg) => this.enqueueMessage(msg));
 
@@ -75,7 +82,8 @@ export class Agent {
     this.running = true;
 
     const activeChannels = this.channels.getActiveChannels();
-    logger.info({ channels: activeChannels }, 'Mercury is awake');
+    const toolNames = this.capabilities.getToolNames();
+    logger.info({ channels: activeChannels, tools: toolNames }, 'Mercury is awake');
   }
 
   async sleep(): Promise<void> {
@@ -95,17 +103,26 @@ export class Agent {
       const recentMemory = this.shortTerm.getRecent(msg.channelId, 10);
       const relevantFacts = this.longTerm.search(msg.content, 3);
 
-      let contextPrompt = '';
+      const messages: any[] = [];
+
       if (relevantFacts.length > 0) {
-        contextPrompt += '\nRelevant facts:\n' + relevantFacts.map(f => `- ${f.fact}`).join('\n');
-      }
-      if (recentMemory.length > 0) {
-        contextPrompt += '\nRecent conversation:\n' + recentMemory
-          .map(m => `${m.role}: ${m.content}`)
-          .join('\n');
+        messages.push({
+          role: 'user',
+          content: 'Relevant facts from memory:\n' + relevantFacts.map(f => `- ${f.fact}`).join('\n'),
+        });
+        messages.push({ role: 'assistant', content: 'Noted. I\'ll use these facts.' });
       }
 
-      const fullPrompt = contextPrompt + '\n\nUser: ' + msg.content;
+      if (recentMemory.length > 0) {
+        for (const m of recentMemory) {
+          messages.push({
+            role: m.role === 'user' ? 'user' : 'assistant',
+            content: m.content,
+          });
+        }
+      }
+
+      messages.push({ role: 'user', content: msg.content });
 
       this.lifecycle.transition('responding');
 
@@ -114,16 +131,33 @@ export class Agent {
         await channel.typing(msg.channelId).catch(() => {});
       }
 
-      logger.info({ provider: provider.name, model: provider.getModel() }, 'Generating response');
-      const response = await provider.generateText(fullPrompt, systemPrompt);
-      logger.info({ tokens: response.totalTokens }, 'Response generated');
+      logger.info({ provider: provider.name, model: provider.getModel(), steps: MAX_STEPS }, 'Generating agentic response');
+
+      const result = await generateText({
+        model: provider.getModelInstance(),
+        system: systemPrompt,
+        messages,
+        tools: this.capabilities.getTools(),
+        maxSteps: MAX_STEPS,
+        onStepFinish: async ({ toolCalls, text }) => {
+          if (toolCalls && toolCalls.length > 0) {
+            const names = toolCalls.map((tc: any) => tc.toolName).join(', ');
+            logger.info({ tools: names }, 'Tool call step');
+            if (channel) {
+              await channel.send(`  [Using: ${names}]`, msg.channelId).catch(() => {});
+            }
+          }
+        },
+      });
+
+      const finalText = result.text;
 
       this.tokenBudget.recordUsage({
-        provider: response.provider,
-        model: response.model,
-        inputTokens: response.inputTokens,
-        outputTokens: response.outputTokens,
-        totalTokens: response.totalTokens,
+        provider: provider.name,
+        model: provider.getModel(),
+        inputTokens: result.usage?.promptTokens ?? 0,
+        outputTokens: result.usage?.completionTokens ?? 0,
+        totalTokens: (result.usage?.promptTokens ?? 0) + (result.usage?.completionTokens ?? 0),
         channelType: msg.channelType,
       });
 
@@ -138,19 +172,19 @@ export class Agent {
         id: Date.now().toString(36),
         timestamp: Date.now(),
         role: 'assistant',
-        content: response.text,
-        tokenCount: response.totalTokens,
+        content: finalText,
+        tokenCount: (result.usage?.promptTokens ?? 0) + (result.usage?.completionTokens ?? 0),
       });
 
       this.episodic.record({
         type: 'message',
-        summary: `User: ${msg.content.slice(0, 100)} | Agent: ${response.text.slice(0, 100)}`,
+        summary: `User: ${msg.content.slice(0, 100)} | Agent: ${finalText.slice(0, 100)}`,
         channelType: msg.channelType,
       });
 
       if (channel) {
         logger.info({ channelType: msg.channelType, targetId: msg.channelId }, 'Sending response');
-        await channel.send(response.text, msg.channelId);
+        await channel.send(finalText, msg.channelId);
       } else {
         logger.warn({ channelType: msg.channelType }, 'No channel found for response');
       }

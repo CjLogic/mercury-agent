@@ -1,0 +1,63 @@
+import { tool } from 'ai';
+import { z } from 'zod';
+import { existsSync, readdirSync, statSync } from 'node:fs';
+import { resolve } from 'node:path';
+import type { PermissionManager } from '../permissions.js';
+
+export function createListDirTool(permissions: PermissionManager) {
+  return tool({
+    description: 'List the contents of a directory. Shows file names, types, and sizes.',
+    parameters: z.object({
+      path: z.string().describe('Absolute or relative path to the directory'),
+    }),
+    execute: async ({ path }) => {
+      const resolved = resolve(path);
+      const check = await permissions.checkFsAccess(resolved, 'read');
+      if (!check.allowed) {
+        return `Error: ${check.reason}`;
+      }
+
+      if (!existsSync(resolved)) {
+        return `Error: Directory not found: ${resolved}`;
+      }
+
+      try {
+        const stat = statSync(resolved);
+        if (!stat.isDirectory()) {
+          return `Error: ${resolved} is a file, not a directory. Use read_file instead.`;
+        }
+
+        const entries = readdirSync(resolved, { withFileTypes: true });
+        const lines = entries.map(entry => {
+          const isDir = entry.isDirectory();
+          const fullPath = join(resolved, entry.name);
+          let size = '';
+          try {
+            if (!isDir) {
+              size = ` (${formatSize(statSync(fullPath).size)})`;
+            }
+          } catch {}
+          return `${isDir ? '📁' : '📄'} ${entry.name}${size}`;
+        });
+
+        if (lines.length === 0) {
+          return `Directory ${resolved} is empty`;
+        }
+
+        return `Contents of ${resolved} (${entries.length} items):\n${lines.join('\n')}`;
+      } catch (err: any) {
+        return `Error listing directory: ${err.message}`;
+      }
+    },
+  });
+}
+
+function join(base: string, name: string): string {
+  return base.endsWith('/') ? base + name : base + '/' + name;
+}
+
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes}B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
+}

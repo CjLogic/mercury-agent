@@ -10,7 +10,7 @@ import { Agent } from './core/agent.js';
 import { ChannelRegistry } from './channels/registry.js';
 import { CLIChannel } from './channels/cli.js';
 import { TokenBudget } from './utils/tokens.js';
-import { SkillLoader } from './skills/loader.js';
+import { CapabilityRegistry } from './capabilities/registry.js';
 
 function hr() {
   console.log(chalk.dim('─'.repeat(50)));
@@ -94,8 +94,9 @@ async function onboarding(): Promise<void> {
   const home = getMercuryHome();
   console.log('');
   console.log(chalk.green(`  ✓ Config saved to ${home}/mercury.yaml`));
-  console.log(chalk.green(`  ✓ Soul files will be seeded in ${home}/soul/`));
+  console.log(chalk.green(`  ✓ Soul files seeded in ${home}/soul/`));
   console.log(chalk.green(`  ✓ Memory stored in ${home}/memory/`));
+  console.log(chalk.green(`  ✓ Permissions seeded in ${home}/permissions.yaml`));
   console.log('');
   console.log(chalk.cyan(`  ${config.identity.name} is ready. Run \`mercury start\` to begin.`));
   console.log('');
@@ -120,20 +121,19 @@ async function runAgent(): Promise<void> {
   const available = providers.listAvailable();
   console.log(chalk.dim(`  Providers: ${available.join(', ')}`));
 
+  const capabilities = new CapabilityRegistry();
+  const toolNames = capabilities.getToolNames();
+  console.log(chalk.dim(`  Tools: ${toolNames.join(', ')}`));
+
   const identity = new Identity();
   const shortTerm = new ShortTermMemory(config);
   const longTerm = new LongTermMemory(config);
   const episodic = new EpisodicMemory(config);
-  const skillLoader = new SkillLoader();
-  const skills = skillLoader.discover();
-  if (skills.length > 0) {
-    console.log(chalk.dim(`  Skills: ${skills.map(s => s.name).join(', ')}`));
-  }
 
   const channels = new ChannelRegistry(config);
 
   const agent = new Agent(
-    config, providers, identity, shortTerm, longTerm, episodic, channels, tokenBudget,
+    config, providers, identity, shortTerm, longTerm, episodic, channels, tokenBudget, capabilities,
   );
 
   await agent.birth();
@@ -141,8 +141,15 @@ async function runAgent(): Promise<void> {
 
   const cliChannel = channels.get('cli') as CLIChannel | undefined;
 
+  if (cliChannel) {
+    capabilities.permissions.onAsk(async (prompt: string) => {
+      return cliChannel.askPermission(prompt);
+    });
+  }
+
   const activeCh = channels.getActiveChannels();
   console.log(chalk.dim(`  Channels: ${activeCh.join(', ')}`));
+  console.log(chalk.dim(`  Permissions: ${getMercuryHome()}/permissions.yaml`));
   hr();
   console.log('');
   console.log(chalk.green(`  ${name} is live. Type a message and press Enter.`));

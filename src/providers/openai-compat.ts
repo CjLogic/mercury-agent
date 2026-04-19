@@ -56,4 +56,8 @@ export class OpenAICompatProvider extends BaseProvider {
   isAvailable(): boolean {
     return this.config.apiKey.length > 0;
   }
+
+  getModelInstance() {
+    return this.modelInstance;
+  }
 }

@@ -1,0 +1,38 @@
+import { tool } from 'ai';
+import { z } from 'zod';
+import { existsSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import type { PermissionManager } from '../permissions.js';
+
+export function createReadFileTool(permissions: PermissionManager) {
+  return tool({
+    description: 'Read the contents of a file. The path must be within an allowed scope.',
+    parameters: z.object({
+      path: z.string().describe('Absolute or relative path to the file'),
+    }),
+    execute: async ({ path }) => {
+      const resolved = resolve(path);
+      const check = await permissions.checkFsAccess(resolved, 'read');
+      if (!check.allowed) {
+        return `Error: ${check.reason}`;
+      }
+
+      if (!existsSync(resolved)) {
+        return `Error: File not found: ${resolved}`;
+      }
+
+      try {
+        const stat = await import('node:fs').then(m => m.statSync(resolved));
+        if (stat.isDirectory()) {
+          return `Error: ${resolved} is a directory, not a file. Use list_dir instead.`;
+        }
+        if (stat.size > 1024 * 1024) {
+          return `Error: File too large (${Math.round(stat.size / 1024)}KB). Maximum is 1MB.`;
+        }
+        return readFileSync(resolved, 'utf-8');
+      } catch (err: any) {
+        return `Error reading file: ${err.message}`;
+      }
+    },
+  });
+}
