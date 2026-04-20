@@ -117,7 +117,6 @@ async function configure(existingConfig?: MercuryConfig): Promise<void> {
   const deepseekKey = await ask(chalk.white(`  DeepSeek API key${dsMask}: `));
   if (deepseekKey) {
     config.providers.deepseek.apiKey = deepseekKey;
-    config.providers.default = 'deepseek';
   }
 
   const oaiMask = isReconfig && config.providers.openai.apiKey ? ` [${maskKey(config.providers.openai.apiKey)}]` : ' (Enter to skip)';
@@ -132,6 +131,31 @@ async function configure(existingConfig?: MercuryConfig): Promise<void> {
   if (!hasKey) {
     console.log(chalk.red('\n  At least one LLM API key is required.'));
     process.exit(1);
+  }
+
+  const availableProviders: string[] = [];
+  if (config.providers.deepseek.apiKey) availableProviders.push('deepseek');
+  if (config.providers.openai.apiKey) availableProviders.push('openai');
+  if (config.providers.anthropic.apiKey) availableProviders.push('anthropic');
+
+  if (isReconfig && availableProviders.length > 1) {
+    console.log('');
+    console.log(chalk.bold.white('  Default Provider'));
+    console.log(chalk.dim('  Select the default LLM provider (the one used first).'));
+    console.log('');
+    for (let i = 0; i < availableProviders.length; i++) {
+      const marker = availableProviders[i] === config.providers.default ? ' (current)' : '';
+      console.log(chalk.white(`    ${i + 1}. ${availableProviders[i]}${marker}`));
+    }
+    console.log('');
+    const choice = await ask(chalk.white(`  Choose [1-${availableProviders.length}] [Enter to keep ${config.providers.default}]: `));
+    const num = parseInt(choice, 10);
+    if (num >= 1 && num <= availableProviders.length) {
+      config.providers.default = availableProviders[num - 1];
+    }
+  } else if (!isReconfig) {
+    config.providers.default = availableProviders[0];
+    console.log(chalk.dim(`  Default provider set to ${config.providers.default}`));
   }
 
   hr();
