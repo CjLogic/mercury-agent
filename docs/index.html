@@ -3,13 +3,60 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mercury — Soul-Driven AI Agent</title>
-  <meta name="description" content="Mercury is a soul-driven, token-efficient AI agent that runs 24/7. CLI + Telegram, 21 built-in tools, skill system, scheduling, and hardened permissions.">
+  <title>Mercury — Soul-Driven AI Agent with Permission Guardrails | Cosmic Stack</title>
+  <meta name="description" content="The AI agent that asks before it acts. Permission guardrails, token efficiency, and full control. Runs 24/7 from CLI or Telegram. 21 built-in tools, skill system, scheduling.">
+  <meta name="author" content="Cosmic Stack">
+  <meta name="robots" content="index, follow">
+  <meta name="keywords" content="ai agent, personal assistant, cli agent, telegram bot, permission-hardened, token budget, soul-driven, open source, mercury, cosmicstack">
   <meta name="theme-color" content="#0a0a0a">
-  <meta property="og:title" content="Mercury — Soul-Driven AI Agent">
-  <meta property="og:description" content="Your personal AI agent. Soul-driven, token-efficient, always on.">
+  <link rel="canonical" href="https://mercury.cosmicstack.org">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Mercury — Soul-Driven AI Agent with Permission Guardrails">
+  <meta property="og:description" content="The AI agent that asks before it acts. Permission guardrails, token efficiency, and full control. Runs 24/7 from CLI or Telegram.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://mercury.cosmicstack.org">
+  <meta property="og:image" content="https://mercury.cosmicstack.org/card.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Mercury — Soul-Driven AI Agent. Permission Guardrails. Token Efficiency. Full Control.">
+  <meta property="og:site_name" content="Mercury">
+  <meta property="og:locale" content="en_US">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Mercury — Soul-Driven AI Agent with Permission Guardrails">
+  <meta name="twitter:description" content="The AI agent that asks before it acts. Permission guardrails, token efficiency, and full control.">
+  <meta name="twitter:image" content="https://mercury.cosmicstack.org/card.png">
+  <meta name="twitter:image:alt" content="Mercury — Soul-Driven AI Agent. Permission Guardrails. Token Efficiency. Full Control.">
+  <meta name="twitter:site" content="@cosmicstack">
+  <meta name="twitter:creator" content="@cosmicstack">
+
+  <!-- Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Mercury",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Node.js 20+",
+    "description": "Soul-driven AI agent with permission guardrails, token budgets, and multi-channel access. Runs 24/7 from CLI or Telegram.",
+    "url": "https://mercury.cosmicstack.org",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "author": {
+      "@type": "Organization",
+      "name": "Cosmic Stack",
+      "url": "https://github.com/cosmicstack-labs"
+    },
+    "programmingLanguage": "TypeScript",
+    "codeRepository": "https://github.com/cosmicstack-labs/mercury-agent"
+  }
+  </script>
+
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☿</text></svg>">
   <link rel="stylesheet" href="style.css">
 </head>
@@ -23,7 +70,7 @@
         <a href="#demo">Demo</a>
         <a href="#capabilities">Capabilities</a>
         <a href="#compare">Compare</a>
-        <a href="https://github.com/anomalyco/mercury" class="nav-cta" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/cosmicstack-labs/mercury-agent" class="nav-cta" target="_blank" rel="noopener">GitHub</a>
       </div>
       <button class="nav-toggle" id="navToggle" aria-label="Menu">☰</button>
     </div>
@@ -104,9 +151,9 @@
           <div class="step-number">1</div>
           <h3>Install</h3>
           <div class="terminal-inline">
-            <code>npm i -g mercury</code>
+            <code>npm i -g @cosmicstack/mercury-agent</code>
           </div>
-          <p>Or use <code>npx mercury</code> — no install needed.</p>
+          <p>Or use <code>npx @cosmicstack/mercury-agent</code> — no install needed.</p>
         </div>
         <div class="step" data-reveal>
           <div class="step-number">2</div>
@@ -368,12 +415,12 @@
     <div class="container">
       <h2 class="section-title">Ready to Deploy Your Agent?</h2>
       <div class="cta-terminal">
-        <code>npm i -g mercury && mercury</code>
+        <code>npm i -g @cosmicstack/mercury-agent && mercury</code>
       </div>
       <p class="cta-sub">That's it. 60 seconds to your own AI agent.</p>
       <div class="cta-links">
-        <a href="https://github.com/anomalyco/mercury" target="_blank" rel="noopener">GitHub →</a>
-        <a href="https://github.com/anomalyco/mercury/issues" target="_blank" rel="noopener">Report an Issue →</a>
+        <a href="https://github.com/cosmicstack-labs/mercury-agent" target="_blank" rel="noopener">GitHub →</a>
+        <a href="https://github.com/cosmicstack-labs/mercury-agent/issues" target="_blank" rel="noopener">Report an Issue →</a>
       </div>
     </div>
   </section>
@@ -386,8 +433,8 @@
       </div>
       <div class="footer-links">
         <a href="https://mercury.cosmicstack.org">mercury.cosmicstack.org</a>
-        <a href="https://github.com/anomalyco/mercury">GitHub</a>
-        <a href="https://github.com/anomalyco/mercury/issues">Issues</a>
+        <a href="https://github.com/cosmicstack-labs/mercury-agent">GitHub</a>
+        <a href="https://github.com/cosmicstack-labs/mercury-agent/issues">Issues</a>
       </div>
     </div>
   </footer>
