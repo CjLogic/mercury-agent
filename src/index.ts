@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
 import { Command } from 'commander';
 import readline from 'node:readline';
 import chalk from 'chalk';
@@ -21,6 +24,9 @@ import { startBackground, stopDaemon, showLogs, getDaemonStatus, restartDaemon, 
 import { installService, uninstallService, showServiceStatus, isServiceInstalled } from './cli/service.js';
 import { runWithWatchdog } from './cli/watchdog.js';
 
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const pkgVersion = JSON.parse(readFileSync(join(__dirname, '..', 'package.json'), 'utf8')).version;
+
 function hr() {
   console.log(chalk.dim('─'.repeat(50)));
 }
@@ -33,7 +39,7 @@ function banner() {
   }
   console.log('');
   console.log(chalk.white('  an AI agent for personal tasks'));
-  console.log(chalk.dim('  v0.2.3 · by Cosmic Stack · mercury.cosmicstack.org'));
+  console.log(chalk.dim(`  v${pkgVersion} · by Cosmic Stack · mercury.cosmicstack.org`));
   console.log('');
 }
 
@@ -366,7 +372,7 @@ const program = new Command();
 program
   .name('mercury')
   .description('Mercury — Soul-driven AI agent with permission-hardened tools, token budgets, and multi-channel access.')
-  .version('0.2.3')
+  .version(pkgVersion)
   .option('-v, --verbose', 'Show debug logs')
   .action(async () => {
     if (!isSetupComplete()) {
