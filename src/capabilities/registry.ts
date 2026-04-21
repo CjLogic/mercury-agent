@@ -23,7 +23,13 @@ import { createGitLogTool } from './git/git-log.js';
 import { createGitAddTool } from './git/git-add.js';
 import { createGitCommitTool } from './git/git-commit.js';
 import { createGitPushTool } from './git/git-push.js';
+import { createCreatePrTool } from './github/create-pr.js';
+import { createReviewPrTool } from './github/review-pr.js';
+import { createListIssuesTool } from './github/list-issues.js';
+import { createCreateIssueTool } from './github/create-issue.js';
+import { createGithubApiTool } from './github/github-api.js';
 import { createFetchUrlTool } from './web/fetch-url.js';
+import { isGitHubConfigured, setGitHubToken } from '../utils/github.js';
 import type { SkillLoader } from '../skills/loader.js';
 import type { Scheduler } from '../core/scheduler.js';
 import type { TokenBudget } from '../utils/tokens.js';
@@ -129,6 +135,15 @@ export class CapabilityRegistry {
       this.tools.git_commit = createGitCommitTool();
       this.tools.git_push = createGitPushTool(this.permissions);
       logger.info('Git tools registered');
+    }
+
+    if (isGitHubConfigured()) {
+      this.tools.create_pr = createCreatePrTool();
+      this.tools.review_pr = createReviewPrTool();
+      this.tools.list_issues = createListIssuesTool();
+      this.tools.create_issue = createCreateIssueTool();
+      this.tools.github_api = createGithubApiTool(this.permissions);
+      logger.info('GitHub tools registered');
     }
 
     this.tools.fetch_url = createFetchUrlTool();

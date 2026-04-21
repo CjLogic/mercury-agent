@@ -41,6 +41,10 @@ export interface MercuryConfig {
       streaming?: boolean;
     };
   };
+  github: {
+    username: string;
+    email: string;
+  };
   memory: {
     dir: string;
     shortTermMaxMessages: number;
@@ -112,6 +116,10 @@ export function getDefaultConfig(): MercuryConfig {
           .map(Number),
         streaming: getEnvBool('TELEGRAM_STREAMING', true),
       },
+    },
+    github: {
+      username: getEnv('GITHUB_USERNAME', ''),
+      email: getEnv('GITHUB_EMAIL', ''),
     },
     memory: {
       dir: getEnv('MEMORY_DIR', join(home, 'memory')),

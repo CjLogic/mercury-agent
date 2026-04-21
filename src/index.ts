@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { Command } from 'commander';
@@ -22,6 +22,7 @@ import { getManual } from './utils/manual.js';
 import { startBackground, stopDaemon, showLogs, getDaemonStatus, restartDaemon, tryAutoDaemonize } from './cli/daemon.js';
 import { installService, uninstallService, showServiceStatus, isServiceInstalled } from './cli/service.js';
 import { runWithWatchdog } from './cli/watchdog.js';
+import { setGitHubToken } from './utils/github.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const pkgVersion = JSON.parse(readFileSync(join(__dirname, '..', 'package.json'), 'utf8')).version;
@@ -75,6 +76,18 @@ function maskKey(key: string): string {
   if (!key) return '';
   if (key.length <= 8) return '••••••••';
   return key.slice(0, 4) + '••••' + key.slice(-4);
+}
+
+function appendToEnv(key: string, value: string): void {
+  const envPath = join(getMercuryHome(), '.env');
+  let envContent = '';
+  if (existsSync(envPath)) {
+    envContent = readFileSync(envPath, 'utf-8');
+  }
+  const lines = envContent.split('\n').filter((l: string) => !l.startsWith(`${key}=`) && l.trim() !== '');
+  lines.push(`${key}=${value}`);
+  writeFileSync(envPath, lines.join('\n') + '\n', 'utf-8');
+  process.env[key] = value;
 }
 
 async function configure(existingConfig?: MercuryConfig): Promise<void> {
@@ -187,6 +200,27 @@ async function configure(existingConfig?: MercuryConfig): Promise<void> {
   } else if (telegramToken) {
     config.channels.telegram.botToken = telegramToken;
     config.channels.telegram.enabled = true;
+  }
+
+  hr();
+  console.log('');
+  console.log(chalk.bold.white('  GitHub (optional)'));
+  console.log(chalk.dim('  Connect Mercury to GitHub for PRs, issues, and co-authored commits.'));
+  console.log(chalk.dim('  Leave empty to skip. You can add it later with mercury doctor.'));
+  console.log('');
+
+  const ghUserCurrent = isReconfig && config.github.username ? ` [${config.github.username}]` : '';
+  const ghUsername = await ask(chalk.white(`  GitHub username${ghUserCurrent}: `));
+  if (ghUsername) config.github.username = ghUsername;
+
+  const ghEmailCurrent = isReconfig && config.github.email ? ` [${config.github.email}]` : '';
+  const ghEmail = await ask(chalk.white(`  GitHub email${ghEmailCurrent}: `));
+  if (ghEmail) config.github.email = ghEmail;
+
+  const ghTokenCurrent = process.env.GITHUB_TOKEN ? ` [${maskKey(process.env.GITHUB_TOKEN)}]` : '';
+  const ghToken = await ask(chalk.white(`  GitHub PAT (repo scope)${ghTokenCurrent}: `));
+  if (ghToken) {
+    appendToEnv('GITHUB_TOKEN', ghToken);
   }
 
   hr();
@@ -313,6 +347,10 @@ async function runAgent(isDaemon: boolean = false): Promise<void> {
       await msg.sendFile(filePath);
     }
   });
+
+  if (process.env.GITHUB_TOKEN) {
+    setGitHubToken(process.env.GITHUB_TOKEN);
+  }
 
   capabilities.registerAll();
 
