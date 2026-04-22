@@ -6,11 +6,13 @@ import type { ChannelMessage } from '../types/channel.js';
 import { BaseChannel } from './base.js';
 import { logger } from '../utils/logger.js';
 import { renderMarkdown } from '../utils/markdown.js';
+import { selectWithArrowKeys, type ArrowSelectOption } from '../utils/arrow-select.js';
 
 export class CLIChannel extends BaseChannel {
   readonly type = 'cli' as const;
   private rl: readline.Interface | null = null;
   private agentName: string;
+  private menuDepth = 0;
 
   constructor(agentName: string = 'Mercury') {
     super();
@@ -22,6 +24,13 @@ export class CLIChannel extends BaseChannel {
   }
 
   async start(): Promise<void> {
+    this.createInterface();
+    this.ready = true;
+    this.showPrompt();
+    logger.info('CLI channel started');
+  }
+
+  private createInterface(): void {
     this.rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout,
@@ -45,10 +54,6 @@ export class CLIChannel extends BaseChannel {
       };
       this.emit(msg);
     });
-
-    this.ready = true;
-    this.showPrompt();
-    logger.info('CLI channel started');
   }
 
   async stop(): Promise<void> {
@@ -68,7 +73,9 @@ export class CLIChannel extends BaseChannel {
       .join('\n');
     console.log(indented);
     console.log('');
-    this.showPrompt();
+    if (this.menuDepth === 0) {
+      this.showPrompt();
+    }
   }
 
   async sendFile(filePath: string, _targetId?: string): Promise<void> {
@@ -88,7 +95,9 @@ export class CLIChannel extends BaseChannel {
     console.log(chalk.dim(`  path: ${resolved}`));
     console.log(chalk.dim(`  size: ${sizeStr}`));
     console.log('');
-    this.showPrompt();
+    if (this.menuDepth === 0) {
+      this.showPrompt();
+    }
   }
 
   async stream(content: AsyncIterable<string>, _targetId?: string): Promise<string> {
@@ -100,7 +109,9 @@ export class CLIChannel extends BaseChannel {
       full += chunk;
     }
     console.log('\n');
-    this.showPrompt();
+    if (this.menuDepth === 0) {
+      this.showPrompt();
+    }
     return full;
   }
 
@@ -113,6 +124,33 @@ export class CLIChannel extends BaseChannel {
       this.rl.setPrompt('  You: ');
       this.rl.prompt();
     }
+  }
+
+  async withMenu<T>(runner: (select: (title: string, options: ArrowSelectOption[]) => Promise<string>) => Promise<T>): Promise<T> {
+    this.menuDepth += 1;
+    this.suspendPrompt();
+
+    try {
+      return await runner((title, options) => selectWithArrowKeys(title, options));
+    } finally {
+      this.menuDepth = Math.max(0, this.menuDepth - 1);
+      if (this.menuDepth === 0) {
+        this.resumePrompt();
+        this.showPrompt();
+      }
+    }
+  }
+
+  private suspendPrompt(): void {
+    if (!this.rl) return;
+    process.stdout.write('\n');
+    this.rl.close();
+    this.rl = null;
+  }
+
+  private resumePrompt(): void {
+    if (!this.ready || this.rl) return;
+    this.createInterface();
   }
 
   async prompt(question: string): Promise<string> {
